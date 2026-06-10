@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+
+  <div class="mb-4">
+    <h2 class="fw-bold mb-1"><i class="bi bi-bar-chart-line text-primary"></i> Analytics</h2>
+    <p class="text-muted mb-0">Your productivity insights and progress overview</p>
+  </div>
+
+  <!-- Top stat cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-primary-soft"><i class="bi bi-list-task"></i></div>
+        <div class="stat-value">{{ total_tasks }}</div>
+        <div class="stat-label">Total Tasks</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-success-soft"><i class="bi bi-check-circle-fill"></i></div>
+        <div class="stat-value text-success">{{ completed_tasks }}</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-warning-soft"><i class="bi bi-clock-history"></i></div>
+        <div class="stat-value text-warning">{{ pending_tasks }}</div>
+        <div class="stat-label">Pending</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-danger-soft"><i class="bi bi-exclamation-triangle"></i></div>
+        <div class="stat-value text-danger">{{ overdue_tasks }}</div>
+        <div class="stat-label">Overdue</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Productivity score + Focus stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4 text-center">
+          <h6 class="fw-bold text-muted mb-3">Productivity Score</h6>
+          <div class="score-ring mx-auto mb-3" style="--score:{{ productivity_score }};">
+            <span class="score-ring-text">{{ productivity_score }}%</span>
+          </div>
+          {% if productivity_score >= 75 %}
+            <span class="badge bg-success fs-6">Excellent</span>
+          {% elif productivity_score >= 50 %}
+            <span class="badge bg-warning text-dark fs-6">Good</span>
+          {% elif productivity_score >= 25 %}
+            <span class="badge fs-6" style="background:#f97316;color:white;">Fair</span>
+          {% else %}
+            <span class="badge bg-danger fs-6">Needs Work</span>
+          {% endif %}
+          <p class="text-muted small mt-2 mb-0">
+            {{ completed_tasks }} of {{ total_tasks }} tasks completed
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h6 class="fw-bold text-muted mb-3"><i class="bi bi-stopwatch text-success"></i> Focus Sessions</h6>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">Total sessions</span>
+            <span class="fw-bold text-success">{{ total_sessions }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">Total minutes</span>
+            <span class="fw-bold text-primary">{{ total_minutes }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">This week</span>
+            <span class="fw-bold text-warning">{{ sessions_this_week }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2">
+            <span class="text-muted small">Total hours</span>
+            <span class="fw-bold">{{ (total_minutes // 60) }}h {{ total_minutes % 60 }}m</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h6 class="fw-bold text-muted mb-3"><i class="bi bi-diagram-3 text-primary"></i> Subtask Stats</h6>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">Total subtasks</span>
+            <span class="fw-bold">{{ total_subtasks }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">Completed</span>
+            <span class="fw-bold text-success">{{ completed_subtasks }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2">
+            <span class="text-muted small">Completion rate</span>
+            <span class="fw-bold text-primary">
+              {% if total_subtasks > 0 %}
+                {{ ((completed_subtasks / total_subtasks) * 100)|int }}%
+              {% else %}0%{% endif %}
+            </span>
+          </div>
+          {% if total_subtasks > 0 %}
+          <div class="progress mt-3" style="height:8px;">
+            <div class="progress-bar bg-primary"
+                 style="width:{{ ((completed_subtasks/total_subtasks)*100)|int }}%"></div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Priority breakdown + Risk breakdown -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-4"><i class="bi bi-flag text-primary"></i> Tasks by Priority</h6>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-semibold text-danger">🔴 High</span>
+              <span class="small fw-bold">{{ high_tasks }}</span>
+            </div>
+            <div class="analytics-bar-wrap">
+              <div class="analytics-bar bg-danger"
+                   style="width:{% if total_tasks > 0 %}{{ ((high_tasks/total_tasks)*100)|int }}{% else %}0{% endif %}%">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-semibold text-warning">🟡 Medium</span>
+              <span class="small fw-bold">{{ medium_tasks }}</span>
+            </div>
+            <div class="analytics-bar-wrap">
+              <div class="analytics-bar bg-warning"
+                   style="width:{% if total_tasks > 0 %}{{ ((medium_tasks/total_tasks)*100)|int }}{% else %}0{% endif %}%">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-semibold text-success">🟢 Low</span>
+              <span class="small fw-bold">{{ low_tasks }}</span>
+            </div>
+            <div class="analytics-bar-wrap">
+              <div class="analytics-bar bg-success"
+                   style="width:{% if total_tasks > 0 %}{{ ((low_tasks/total_tasks)*100)|int }}{% else %}0{% endif %}%">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-4"><i class="bi bi-shield-exclamation text-danger"></i> Tasks by Risk Level</h6>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-semibold" style="color:#b91c1c;">⚠️ High Risk</span>
+              <span class="small fw-bold">{{ high_risk }}</span>
+            </div>
+            <div class="analytics-bar-wrap">
+              <div class="analytics-bar"
+                   style="background:#ef4444;
+                          width:{% if total_tasks > 0 %}{{ ((high_risk/total_tasks)*100)|int }}{% else %}0{% endif %}%">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-semibold" style="color:#92400e;">🟡 Medium Risk</span>
+              <span class="small fw-bold">{{ medium_risk }}</span>
+            </div>
+            <div class="analytics-bar-wrap">
+              <div class="analytics-bar"
+                   style="background:#f59e0b;
+                          width:{% if total_tasks > 0 %}{{ ((medium_risk/total_tasks)*100)|int }}{% else %}0{% endif %}%">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-semibold" style="color:#166534;">✅ Low Risk</span>
+              <span class="small fw-bold">{{ low_risk }}</span>
+            </div>
+            <div class="analytics-bar-wrap">
+              <div class="analytics-bar"
+                   style="background:#22c55e;
+                          width:{% if total_tasks > 0 %}{{ ((low_risk/total_tasks)*100)|int }}{% else %}0{% endif %}%">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All tasks progress table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      <h6 class="fw-bold mb-4">
+        <i class="bi bi-table text-primary"></i> All Tasks — Progress Overview
+      </h6>
+
+      {% if tasks_with_data %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Task Name</th>
+              <th>Priority</th>
+              <th>Deadline</th>
+              <th>Progress</th>
+              <th>Risk</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in tasks_with_data %}
+            <tr>
+              <td>
+                <a href="/tasks/{{ item.task.id }}" class="text-decoration-none fw-semibold">
+                  {{ item.task.task_name }}
+                </a>
+              </td>
+              <td>
+                {% if item.task.priority=='High' %}
+                  <span class="badge" style="background:#fee2e2;color:#b91c1c;">High</span>
+                {% elif item.task.priority=='Medium' %}
+                  <span class="badge" style="background:#fef3c7;color:#92400e;">Medium</span>
+                {% else %}
+                  <span class="badge" style="background:#dcfce7;color:#166534;">Low</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">
+                {% if item.task.deadline %}
+                  {% set dl = (item.task.deadline - today).days %}
+                  <span class="{% if dl < 0 %}text-danger{% elif dl <= 3 %}text-warning{% endif %}">
+                    {{ item.task.deadline.strftime('%d %b %Y') }}
+                    {% if dl < 0 %}(overdue){% elif dl == 0 %}(today){% elif dl == 1 %}(tomorrow){% endif %}
+                  </span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td style="min-width:140px;">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height:8px;">
+                    <div class="progress-bar
+                      {% if item.progress >= 75 %}bg-success
+                      {% elif item.progress >= 40 %}bg-warning
+                      {% else %}bg-danger{% endif %}"
+                         style="width:{{ item.progress }}%"></div>
+                  </div>
+                  <span class="small fw-semibold" style="min-width:32px;">{{ item.progress }}%</span>
+                </div>
+              </td>
+              <td>
+                {% if item.risk=='High' %}
+                  <span class="risk-badge badge-risk-high">High</span>
+                {% elif item.risk=='Medium' %}
+                  <span class="risk-badge badge-risk-medium">Medium</span>
+                {% else %}
+                  <span class="risk-badge badge-risk-low">Low</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if item.task.status=='Completed' %}
+                  <span class="badge bg-success">Completed</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Pending</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-clipboard-data text-muted" style="font-size:3rem;opacity:0.4;"></i>
+          <p class="text-muted mt-2">No tasks yet. <a href="/tasks/create">Create your first task</a>.</p>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

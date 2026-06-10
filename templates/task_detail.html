@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}{{ task.task_name }}{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/tasks">Tasks</a></li>
+      <li class="breadcrumb-item active">{{ task.task_name }}</li>
+    </ol>
+  </nav>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+
+      <!-- Task info card -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-start justify-content-between gap-2 mb-3 flex-wrap">
+            <div>
+              <h3 class="fw-bold mb-2 {% if task.status=='Completed' %}text-decoration-line-through text-muted{% endif %}">
+                {{ task.task_name }}
+              </h3>
+              <div class="d-flex gap-2 flex-wrap">
+                {% if task.status=='Completed' %}
+                  <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Completed</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-clock-history"></i> Pending</span>
+                {% endif %}
+                {% if task.priority=='High' %}
+                  <span class="badge" style="background:#fee2e2;color:#b91c1c;">🔴 High Priority</span>
+                {% elif task.priority=='Medium' %}
+                  <span class="badge" style="background:#fef3c7;color:#92400e;">🟡 Medium Priority</span>
+                {% else %}
+                  <span class="badge" style="background:#dcfce7;color:#166534;">🟢 Low Priority</span>
+                {% endif %}
+                {% if risk=='High' %}
+                  <span class="risk-badge badge-risk-high"><i class="bi bi-exclamation-triangle-fill"></i> High Risk</span>
+                {% elif risk=='Medium' %}
+                  <span class="risk-badge badge-risk-medium"><i class="bi bi-dash-circle"></i> Medium Risk</span>
+                {% else %}
+                  <span class="risk-badge badge-risk-low"><i class="bi bi-check-circle"></i> Low Risk</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="/tasks/edit/{{ task.id }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+              <form method="POST" action="/tasks/delete/{{ task.id }}"
+                    onsubmit="return confirm('Delete this task?');">
+                <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+              </form>
+            </div>
+          </div>
+
+          {% if task.description %}
+          <div class="mb-4">
+            <h6 class="fw-bold text-muted mb-1">Description</h6>
+            <p class="mb-0">{{ task.description }}</p>
+          </div>
+          {% endif %}
+
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                <div class="text-muted small mb-1"><i class="bi bi-calendar3"></i> Deadline</div>
+                <div class="fw-semibold">
+                  {% if task.deadline %}
+                    {{ task.deadline.strftime('%d %B %Y') }}
+                    {% if days_left is not none %}
+                      <span class="small {% if days_left < 0 %}text-danger{% elif days_left <= 3 %}text-warning{% else %}text-muted{% endif %}">
+                        ({% if days_left < 0 %}{{ days_left|abs }}d overdue
+                        {% elif days_left == 0 %}today!
+                        {% elif days_left == 1 %}tomorrow
+                        {% else %}{{ days_left }}d left{% endif %})
+                      </span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">No deadline</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                <div class="text-muted small mb-1"><i class="bi bi-calendar-plus"></i> Created</div>
+                <div class="fw-semibold">{{ task.created_at.strftime('%d %B %Y') }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2">
+              <h6 class="fw-bold mb-0">Overall Progress</h6>
+              <span class="fw-bold text-primary">{{ progress }}%</span>
+            </div>
+            <div class="progress" style="height:14px;border-radius:100px;">
+              <div class="progress-bar {% if progress >= 75 %}bg-success{% elif progress >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                   style="width:{{ progress }}%;border-radius:100px;"></div>
+            </div>
+          </div>
+
+          <form method="POST" action="/tasks/toggle/{{ task.id }}">
+            {% if task.status=='Pending' %}
+              <button class="btn btn-success"><i class="bi bi-check-circle"></i> Mark as Completed</button>
+            {% else %}
+              <button class="btn btn-outline-warning"><i class="bi bi-arrow-counterclockwise"></i> Mark as Pending</button>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+
+      <!-- Subtasks card -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0"><i class="bi bi-diagram-3 text-primary"></i> Subtasks</h5>
+            <span class="badge bg-primary">
+              {{ task.subtasks|selectattr('status','equalto','Completed')|list|length }}
+              / {{ task.subtasks|length }} done
+            </span>
+          </div>
+
+          {% if task.subtasks|length > 0 %}
+          <div class="mb-3">
+            {% set ts = task.subtasks|length %}
+            {% set ds = task.subtasks|selectattr('status','equalto','Completed')|list|length %}
+            <div class="progress" style="height:8px;border-radius:100px;">
+              <div class="progress-bar bg-primary"
+                   style="width:{{ ((ds/ts)*100)|int }}%;border-radius:100px;"></div>
+            </div>
+            <small class="text-muted">{{ ds }} of {{ ts }} subtasks done ({{ ((ds/ts)*100)|int }}%)</small>
+          </div>
+          {% endif %}
+
+          <!-- Add subtask form -->
+          <form method="POST" action="/tasks/{{ task.id }}/subtasks/add" class="mb-4">
+            <div class="input-group">
+              <input type="text" name="subtask_name" class="form-control"
+                     placeholder="Add a subtask... e.g. Research introduction" required/>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Add
+              </button>
+            </div>
+            <div class="form-text">Break your task into smaller steps.</div>
+          </form>
+
+          <!-- Subtask list -->
+          {% if task.subtasks %}
+            {% for subtask in task.subtasks %}
+            <div class="subtask-item d-flex align-items-center gap-2 p-3 mb-2 rounded"
+                 style="background:#f8fafc;border:1px solid #e2e8f0;">
+              <form method="POST"
+                    action="/tasks/{{ task.id }}/subtasks/toggle/{{ subtask.id }}"
+                    class="flex-shrink-0">
+                <button type="submit" class="btn btn-sm p-0 border-0">
+                  {% if subtask.status=='Completed' %}
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                  {% else %}
+                    <i class="bi bi-circle text-muted fs-5"></i>
+                  {% endif %}
+                </button>
+              </form>
+
+              <span class="flex-grow-1 {% if subtask.status=='Completed' %}text-decoration-line-through text-muted{% endif %}">
+                {{ subtask.subtask_name }}
+              </span>
+
+              <span class="badge {% if subtask.status=='Completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                {{ subtask.status }}
+              </span>
+
+              <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                      onclick="toggleEditForm({{ subtask.id }})" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </button>
+
+              <form method="POST"
+                    action="/tasks/{{ task.id }}/subtasks/delete/{{ subtask.id }}"
+                    class="flex-shrink-0"
+                    onsubmit="return confirm('Delete this subtask?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+
+            <div id="edit-form-{{ subtask.id }}" class="mb-2 p-3 rounded"
+                 style="display:none;background:#eff6ff;border:1px solid #bfdbfe;">
+              <form method="POST"
+                    action="/tasks/{{ task.id }}/subtasks/edit/{{ subtask.id }}">
+                <div class="input-group">
+                  <input type="text" name="subtask_name" class="form-control form-control-sm"
+                         value="{{ subtask.subtask_name }}" required/>
+                  <button type="submit" class="btn btn-sm btn-success">
+                    <i class="bi bi-save"></i> Save
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary"
+                          onclick="toggleEditForm({{ subtask.id }})">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+              </form>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4">
+              <i class="bi bi-list-task text-muted" style="font-size:2.5rem;opacity:0.3;"></i>
+              <p class="text-muted mt-2 mb-0">No subtasks yet. Add one above.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-4 text-center">
+          <h6 class="fw-bold text-muted mb-3"><i class="bi bi-shield-exclamation"></i> Procrastination Risk</h6>
+          {% if risk=='High' %}
+            <div style="font-size:3rem;">⚠️</div>
+            <span class="risk-badge badge-risk-high d-block my-3 py-2 fs-6">HIGH RISK</span>
+            <p class="text-danger small fw-semibold mb-2">Deadline is very close and progress is low!</p>
+            <div class="alert alert-danger text-start small mb-0">
+              <strong>Do this now:</strong>
+              <ul class="mb-0 mt-1 ps-3">
+                <li>Start working immediately</li>
+                <li>Add and complete subtasks</li>
+                <li>Use the focus timer</li>
+              </ul>
+            </div>
+          {% elif risk=='Medium' %}
+            <div style="font-size:3rem;">🟡</div>
+            <span class="risk-badge badge-risk-medium d-block my-3 py-2 fs-6">MEDIUM RISK</span>
+            <p class="text-warning small fw-semibold mb-2">Deadline is near. Pick up the pace.</p>
+            <div class="alert alert-warning text-start small mb-0">
+              <strong>Suggested:</strong>
+              <ul class="mb-0 mt-1 ps-3">
+                <li>Dedicate focused time today</li>
+                <li>Complete 2–3 subtasks now</li>
+              </ul>
+            </div>
+          {% else %}
+            <div style="font-size:3rem;">✅</div>
+            <span class="risk-badge badge-risk-low d-block my-3 py-2 fs-6">LOW RISK</span>
+            <p class="text-success small fw-semibold mb-2">You're on track! Keep going.</p>
+            <div class="alert alert-success text-start small mb-0">
+              <strong>Keep it up:</strong>
+              <ul class="mb-0 mt-1 ps-3">
+                <li>Maintain your current pace</li>
+                <li>Use focus timer for efficiency</li>
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-line text-primary"></i> Quick Stats</h6>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">Total subtasks</span>
+            <span class="fw-bold">{{ task.subtasks|length }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">Completed</span>
+            <span class="fw-bold text-success">{{ task.subtasks|selectattr('status','equalto','Completed')|list|length }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted small">Pending</span>
+            <span class="fw-bold text-warning">{{ task.subtasks|selectattr('status','equalto','Pending')|list|length }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2">
+            <span class="text-muted small">Progress</span>
+            <span class="fw-bold text-primary">{{ progress }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3">Quick Actions</h6>
+          <a href="/focus-timer" class="btn btn-success w-100 mb-2"><i class="bi bi-stopwatch"></i> Start Focus Session</a>
+          <a href="/tasks/edit/{{ task.id }}" class="btn btn-outline-secondary w-100 mb-2"><i class="bi bi-pencil"></i> Edit Task</a>
+          <a href="/tasks" class="btn btn-outline-primary w-100"><i class="bi bi-arrow-left"></i> Back to Tasks</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleEditForm(id) {
+  const f = document.getElementById('edit-form-' + id);
+  if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

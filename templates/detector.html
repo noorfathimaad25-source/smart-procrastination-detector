@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+{% block title %}Procrastination Detector{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+
+  <!-- Page Header -->
+  <div class="mb-4">
+    <h2 class="fw-bold mb-1">
+      <i class="bi bi-exclamation-triangle text-danger"></i>
+      Procrastination Detector
+    </h2>
+    <p class="text-muted mb-0">
+      Real-time risk analysis of all your pending tasks
+    </p>
+  </div>
+
+  <!-- ======================================================
+       OVERALL RISK BANNER
+       ====================================================== -->
+  {% if total_pending == 0 %}
+    <div class="alert alert-success border-0 shadow-sm mb-4 p-4">
+      <div class="d-flex align-items-center gap-3">
+        <div style="font-size:3rem;">🎉</div>
+        <div>
+          <h5 class="fw-bold mb-1">All caught up!</h5>
+          <p class="mb-0">
+            You have no pending tasks right now.
+            Great job staying on top of your work!
+          </p>
+        </div>
+      </div>
+    </div>
+
+  {% elif overall_risk == 'High' %}
+    <div class="alert border-0 shadow-sm mb-4 p-4"
+         style="background:#fef2f2;border-left:6px solid #dc2626 !important;
+                border-radius:12px;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="font-size:3rem;">⚠️</div>
+        <div>
+          <h5 class="fw-bold mb-1 text-danger">
+            Overall Status: HIGH RISK
+          </h5>
+          <p class="mb-0 text-danger">
+            You have <strong>{{ high_risk_tasks|length }}</strong> high-risk
+            task{{ 's' if high_risk_tasks|length != 1 else '' }} that need
+            immediate attention. Start working on these right now!
+          </p>
+        </div>
+        <a href="/focus-timer" class="btn btn-danger ms-auto flex-shrink-0">
+          <i class="bi bi-stopwatch"></i> Start Focus Session
+        </a>
+      </div>
+    </div>
+
+  {% elif overall_risk == 'Medium' %}
+    <div class="alert border-0 shadow-sm mb-4 p-4"
+         style="background:#fffbeb;border-left:6px solid #d97706 !important;
+                border-radius:12px;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="font-size:3rem;">🟡</div>
+        <div>
+          <h5 class="fw-bold mb-1 text-warning">
+            Overall Status: MEDIUM RISK
+          </h5>
+          <p class="mb-0" style="color:#92400e;">
+            You have <strong>{{ medium_risk_tasks|length }}</strong> medium-risk
+            task{{ 's' if medium_risk_tasks|length != 1 else '' }}.
+            Dedicate some focused time today to stay on track.
+          </p>
+        </div>
+        <a href="/focus-timer" class="btn btn-warning ms-auto flex-shrink-0">
+          <i class="bi bi-stopwatch"></i> Start Focus Session
+        </a>
+      </div>
+    </div>
+
+  {% else %}
+    <div class="alert border-0 shadow-sm mb-4 p-4"
+         style="background:#f0fdf4;border-left:6px solid #16a34a !important;
+                border-radius:12px;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="font-size:3rem;">✅</div>
+        <div>
+          <h5 class="fw-bold mb-1 text-success">
+            Overall Status: LOW RISK
+          </h5>
+          <p class="mb-0 text-success">
+            All your tasks are on track. Keep up the great work!
+          </p>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- ======================================================
+       RISK SUMMARY CARDS
+       ====================================================== -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100"
+           style="border-left:4px solid #dc2626 !important;border-radius:12px;">
+        <div class="card-body p-4 text-center">
+          <div style="font-size:2.5rem; margin-bottom:8px;">⚠️</div>
+          <div class="fw-bold" style="font-size:2.5rem; color:#dc2626;">
+            {{ high_risk_tasks|length }}
+          </div>
+          <div class="text-muted">High Risk Tasks</div>
+          <div class="mt-2">
+            <small style="color:#dc2626;">
+              Deadline ≤ 3 days + Progress &lt; 30%
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100"
+           style="border-left:4px solid #d97706 !important;border-radius:12px;">
+        <div class="card-body p-4 text-center">
+          <div style="font-size:2.5rem; margin-bottom:8px;">🟡</div>
+          <div class="fw-bold" style="font-size:2.5rem; color:#d97706;">
+            {{ medium_risk_tasks|length }}
+          </div>
+          <div class="text-muted">Medium Risk Tasks</div>
+          <div class="mt-2">
+            <small style="color:#d97706;">
+              Deadline ≤ 3 days + Progress &lt; 60%
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100"
+           style="border-left:4px solid #16a34a !important;border-radius:12px;">
+        <div class="card-body p-4 text-center">
+          <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
+          <div class="fw-bold" style="font-size:2.5rem; color:#16a34a;">
+            {{ low_risk_tasks|length }}
+          </div>
+          <div class="text-muted">Low Risk Tasks</div>
+          <div class="mt-2">
+            <small style="color:#16a34a;">
+              On track — keep going!
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       HIGH RISK TASKS
+       ====================================================== -->
+  {% if high_risk_tasks %}
+  <div class="card border-0 shadow-sm mb-4"
+       style="border-top:4px solid #dc2626;border-radius:12px;">
+    <div class="card-body p-4">
+
+      <h5 class="fw-bold mb-1 text-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        High Risk Tasks
+        <span class="badge bg-danger ms-2">{{ high_risk_tasks|length }}</span>
+      </h5>
+      <p class="text-muted small mb-4">
+        These tasks have deadlines within 3 days and less than 30% progress.
+        <strong>Act immediately.</strong>
+      </p>
+
+      {% for item in high_risk_tasks %}
+      <div class="mb-3 p-3 rounded"
+           style="background:#fef2f2;border:1px solid #fecaca;">
+
+        <div class="d-flex align-items-start
+                    justify-content-between gap-2 flex-wrap">
+          <div class="flex-grow-1">
+
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+              <h6 class="fw-bold mb-0">
+                <a href="/tasks/{{ item.task.id }}"
+                   class="text-decoration-none text-dark">
+                  {{ item.task.task_name }}
+                </a>
+              </h6>
+              <span class="risk-badge badge-risk-high">
+                <i class="bi bi-exclamation-triangle-fill"></i> High Risk
+              </span>
+              {% if item.task.priority == 'High' %}
+                <span class="badge" style="background:#fee2e2;color:#b91c1c;">
+                  High Priority
+                </span>
+              {% endif %}
+            </div>
+
+            <!-- Deadline info -->
+            <div class="mb-2">
+              {% if item.days_left is not none %}
+                {% if item.days_left < 0 %}
+                  <span class="text-danger fw-bold small">
+                    <i class="bi bi-alarm-fill"></i>
+                    OVERDUE by {{ item.days_left|abs }}
+                    day{{ 's' if item.days_left|abs != 1 else '' }}!
+                  </span>
+                {% elif item.days_left == 0 %}
+                  <span class="text-danger fw-bold small">
+                    <i class="bi bi-alarm-fill"></i> Due TODAY!
+                  </span>
+                {% elif item.days_left == 1 %}
+                  <span class="text-danger small">
+                    <i class="bi bi-alarm"></i> Due TOMORROW
+                  </span>
+                {% else %}
+                  <span class="text-danger small">
+                    <i class="bi bi-calendar3"></i>
+                    Due in {{ item.days_left }} days
+                    ({{ item.task.deadline.strftime('%d %b %Y') }})
+                  </span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted small">No deadline set</span>
+              {% endif %}
+            </div>
+
+            <!-- Progress bar -->
+            <div style="max-width:300px;">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="small text-muted">Progress</span>
+                <span class="small fw-bold text-danger">{{ item.progress }}%</span>
+              </div>
+              <div class="progress" style="height:8px;">
+                <div class="progress-bar bg-danger"
+                     style="width:{{ item.progress }}%;border-radius:100px;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Action suggestion -->
+            <div class="mt-2 p-2 rounded"
+                 style="background:rgba(220,38,38,0.08);">
+              <small class="text-danger">
+                <i class="bi bi-lightbulb-fill"></i>
+                <strong>Suggested action:</strong>
+                {% if item.days_left is not none and item.days_left < 0 %}
+                  This task is overdue! Contact your instructor or
+                  submit whatever you have completed immediately.
+                {% elif item.progress == 0 %}
+                  You haven't started yet. Open a focus session right
+                  now and work for at least 25 minutes on this task.
+                {% else %}
+                  You've started but need to speed up. Break this into
+                  subtasks and complete at least 2–3 in the next session.
+                {% endif %}
+              </small>
+            </div>
+
+          </div>
+
+          <!-- Action buttons -->
+          <div class="d-flex flex-column gap-2 flex-shrink-0">
+            <a href="/tasks/{{ item.task.id }}"
+               class="btn btn-sm btn-danger">
+              <i class="bi bi-eye"></i> View Task
+            </a>
+            <a href="/focus-timer"
+               class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-stopwatch"></i> Focus Now
+            </a>
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ======================================================
+       MEDIUM RISK TASKS
+       ====================================================== -->
+  {% if medium_risk_tasks %}
+  <div class="card border-0 shadow-sm mb-4"
+       style="border-top:4px solid #d97706;border-radius:12px;">
+    <div class="card-body p-4">
+
+      <h5 class="fw-bold mb-1 text-warning">
+        <i class="bi bi-dash-circle-fill"></i>
+        Medium Risk Tasks
+        <span class="badge bg-warning text-dark ms-2">
+          {{ medium_risk_tasks|length }}
+        </span>
+      </h5>
+      <p class="text-muted small mb-4">
+        Deadline within 3 days, but less than 60% progress.
+        Dedicate focused time today.
+      </p>
+
+      {% for item in medium_risk_tasks %}
+      <div class="mb-3 p-3 rounded"
+           style="background:#fffbeb;border:1px solid #fde68a;">
+
+        <div class="d-flex align-items-start
+                    justify-content-between gap-2 flex-wrap">
+          <div class="flex-grow-1">
+
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+              <h6 class="fw-bold mb-0">
+                <a href="/tasks/{{ item.task.id }}"
+                   class="text-decoration-none text-dark">
+                  {{ item.task.task_name }}
+                </a>
+              </h6>
+              <span class="risk-badge badge-risk-medium">
+                <i class="bi bi-dash-circle"></i> Medium Risk
+              </span>
+            </div>
+
+            <div class="mb-2">
+              {% if item.days_left is not none %}
+                <span class="text-warning small fw-semibold">
+                  <i class="bi bi-calendar3"></i>
+                  {% if item.days_left == 0 %}Due today
+                  {% elif item.days_left == 1 %}Due tomorrow
+                  {% else %}Due in {{ item.days_left }} days
+                  ({{ item.task.deadline.strftime('%d %b %Y') }})
+                  {% endif %}
+                </span>
+              {% else %}
+                <span class="text-muted small">No deadline</span>
+              {% endif %}
+            </div>
+
+            <div style="max-width:300px;">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="small text-muted">Progress</span>
+                <span class="small fw-bold text-warning">{{ item.progress }}%</span>
+              </div>
+              <div class="progress" style="height:8px;">
+                <div class="progress-bar bg-warning"
+                     style="width:{{ item.progress }}%;border-radius:100px;">
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-2 p-2 rounded"
+                 style="background:rgba(217,119,6,0.08);">
+              <small style="color:#92400e;">
+                <i class="bi bi-lightbulb-fill"></i>
+                <strong>Suggested action:</strong>
+                Complete at least 2–3 subtasks today. Use a focus
+                session to avoid distractions and make real progress.
+              </small>
+            </div>
+
+          </div>
+
+          <div class="d-flex flex-column gap-2 flex-shrink-0">
+            <a href="/tasks/{{ item.task.id }}"
+               class="btn btn-sm btn-warning text-dark">
+              <i class="bi bi-eye"></i> View Task
+            </a>
+            <a href="/focus-timer"
+               class="btn btn-sm btn-outline-warning">
+              <i class="bi bi-stopwatch"></i> Focus Now
+            </a>
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ======================================================
+       LOW RISK TASKS
+       ====================================================== -->
+  {% if low_risk_tasks %}
+  <div class="card border-0 shadow-sm mb-4"
+       style="border-top:4px solid #16a34a;border-radius:12px;">
+    <div class="card-body p-4">
+
+      <h5 class="fw-bold mb-1 text-success">
+        <i class="bi bi-check-circle-fill"></i>
+        Low Risk Tasks
+        <span class="badge bg-success ms-2">{{ low_risk_tasks|length }}</span>
+      </h5>
+      <p class="text-muted small mb-4">
+        These tasks are on track. Keep up your current pace.
+      </p>
+
+      <div class="row g-3">
+        {% for item in low_risk_tasks %}
+        <div class="col-md-6">
+          <div class="p-3 rounded"
+               style="background:#f0fdf4;border:1px solid #bbf7d0;">
+
+            <div class="d-flex align-items-start
+                        justify-content-between gap-2">
+              <div class="flex-grow-1">
+                <h6 class="fw-semibold mb-1">
+                  <a href="/tasks/{{ item.task.id }}"
+                     class="text-decoration-none text-dark">
+                    {{ item.task.task_name }}
+                  </a>
+                </h6>
+
+                <div class="text-muted small mb-2">
+                  {% if item.task.deadline %}
+                    <i class="bi bi-calendar3"></i>
+                    {% if item.days_left is not none %}
+                      {% if item.days_left <= 0 %}Due today
+                      {% elif item.days_left == 1 %}Due tomorrow
+                      {% else %}{{ item.days_left }} days left{% endif %}
+                    {% endif %}
+                  {% else %}
+                    <i class="bi bi-calendar-x"></i> No deadline
+                  {% endif %}
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height:6px;">
+                    <div class="progress-bar bg-success"
+                         style="width:{{ item.progress }}%;border-radius:100px;">
+                    </div>
+                  </div>
+                  <span class="small fw-semibold text-success"
+                        style="min-width:32px;">
+                    {{ item.progress }}%
+                  </span>
+                </div>
+              </div>
+
+              <span class="risk-badge badge-risk-low flex-shrink-0">
+                <i class="bi bi-check-circle-fill"></i> Low
+              </span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ======================================================
+       PROCRASTINATION TIPS
+       ====================================================== -->
+  <div class="card border-0 shadow-sm"
+       style="background:linear-gradient(135deg,#1e293b,#334155);
+              color:white;border-radius:12px;">
+    <div class="card-body p-4">
+      <h5 class="fw-bold mb-3">
+        <i class="bi bi-lightbulb-fill text-warning"></i>
+        How to Beat Procrastination
+      </h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="p-3 rounded"
+               style="background:rgba(255,255,255,0.08);">
+            <div class="fw-bold mb-1">
+              <i class="bi bi-1-circle text-warning"></i>
+              Break it down
+            </div>
+            <small style="color:rgba(255,255,255,0.7);">
+              Add subtasks to each task. Small steps feel less
+              overwhelming and give you quick wins.
+            </small>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-3 rounded"
+               style="background:rgba(255,255,255,0.08);">
+            <div class="fw-bold mb-1">
+              <i class="bi bi-2-circle text-warning"></i>
+              Use the timer
+            </div>
+            <small style="color:rgba(255,255,255,0.7);">
+              Start a 25-minute focus session. Just starting is
+              the hardest part — the rest gets easier.
+            </small>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="p-3 rounded"
+               style="background:rgba(255,255,255,0.08);">
+            <div class="fw-bold mb-1">
+              <i class="bi bi-3-circle text-warning"></i>
+              Check daily
+            </div>
+            <small style="color:rgba(255,255,255,0.7);">
+              Visit this page every morning to review your risk
+              levels and plan your day accordingly.
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

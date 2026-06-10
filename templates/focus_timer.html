@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Focus Timer{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+  <h2 class="fw-bold mb-1"><i class="bi bi-stopwatch text-success"></i> Focus Timer</h2>
+  <p class="text-muted mb-4">Use the Pomodoro technique — 25 min focus, 5 min break.</p>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4 text-center">
+
+          <!-- Mode tabs -->
+          <div class="btn-group mb-4" role="group">
+            <button class="btn btn-primary active" id="btn-focus"
+                    onclick="setMode('focus')">
+              <i class="bi bi-brain"></i> Focus (25 min)
+            </button>
+            <button class="btn btn-outline-success" id="btn-break"
+                    onclick="setMode('break')">
+              <i class="bi bi-cup-hot"></i> Break (5 min)
+            </button>
+          </div>
+
+          <!-- Timer circle -->
+          <div class="timer-circle mb-4">
+            <div class="timer-display" id="timer-display">25:00</div>
+            <div class="timer-label" id="timer-label">Focus Session</div>
+          </div>
+
+          <!-- Session counter -->
+          <p class="text-muted mb-4">
+            Sessions completed today:
+            <strong class="text-success" id="session-count">0</strong>
+          </p>
+
+          <!-- Control buttons -->
+          <div class="d-flex justify-content-center gap-3">
+            <button class="btn btn-success btn-lg px-4" id="btn-start"
+                    onclick="startTimer()">
+              <i class="bi bi-play-fill"></i> Start
+            </button>
+            <button class="btn btn-warning btn-lg px-4" id="btn-pause"
+                    onclick="pauseTimer()" style="display:none;">
+              <i class="bi bi-pause-fill"></i> Pause
+            </button>
+            <button class="btn btn-outline-secondary btn-lg px-4"
+                    onclick="resetTimer()">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset
+            </button>
+          </div>
+
+          <!-- Motivational quote shown during session -->
+          <div id="quote-box" class="alert alert-info mt-4 text-start" style="display:none;">
+            <i class="bi bi-lightbulb-fill text-warning"></i>
+            <strong id="session-quote"></strong>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Save session form (hidden — submitted automatically) -->
+      <form method="POST" action="/focus-timer/save" id="save-form" style="display:none;">
+        <input type="hidden" name="duration" id="save-duration" value="25"/>
+      </form>
+
+      <!-- Tips card -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary"></i> How it works</h6>
+          <ol class="mb-0 text-muted small ps-3">
+            <li>Click <strong>Start</strong> to begin a 25-minute focus session.</li>
+            <li>Work on one task only — no distractions.</li>
+            <li>When the timer ends, take a 5-minute break.</li>
+            <li>After 4 sessions, take a longer 15–30 min break.</li>
+            <li>Each completed session is saved to your profile.</li>
+          </ol>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const MODES = {
+  focus: { minutes: 25, label: 'Focus Session',  btnId: 'btn-focus' },
+  break: { minutes: 5,  label: 'Break Time',     btnId: 'btn-break' },
+};
+
+const quotes = [
+  "The secret of getting ahead is getting started. — Mark Twain",
+  "Focus on being productive instead of busy. — Tim Ferriss",
+  "Small progress is still progress. — Unknown",
+  "It always seems impossible until it's done. — Nelson Mandela",
+  "Discipline is the bridge between goals and accomplishment. — Jim Rohn",
+  "Don't watch the clock; do what it does. Keep going. — Sam Levenson",
+];
+
+let currentMode   = 'focus';
+let totalSeconds  = 25 * 60;
+let remainSeconds = totalSeconds;
+let timerInterval = null;
+let isRunning     = false;
+let sessionsToday = 0;
+
+function setMode(mode) {
+  if (isRunning) return;
+  currentMode   = mode;
+  totalSeconds  = MODES[mode].minutes * 60;
+  remainSeconds = totalSeconds;
+  document.getElementById('timer-label').textContent = MODES[mode].label;
+  updateDisplay();
+
+  // Update button styles
+  document.getElementById('btn-focus').className =
+    mode === 'focus' ? 'btn btn-primary active' : 'btn btn-outline-primary';
+  document.getElementById('btn-break').className =
+    mode === 'break' ? 'btn btn-success active' : 'btn btn-outline-success';
+}
+
+function updateDisplay() {
+  const m = Math.floor(remainSeconds / 60);
+  const s = remainSeconds % 60;
+  document.getElementById('timer-display').textContent =
+    String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function startTimer() {
+  if (isRunning) return;
+  isRunning = true;
+
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('btn-pause').style.display = 'inline-block';
+
+  // Show a random motivational quote
+  if (currentMode === 'focus') {
+    const qBox   = document.getElementById('quote-box');
+    const qText  = document.getElementById('session-quote');
+    qText.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+    qBox.style.display = 'block';
+  }
+
+  timerInterval = setInterval(function () {
+    remainSeconds--;
+    updateDisplay();
+
+    if (remainSeconds <= 0) {
+      clearInterval(timerInterval);
+      isRunning = false;
+      timerComplete();
+    }
+  }, 1000);
+}
+
+function pauseTimer() {
+  clearInterval(timerInterval);
+  isRunning = false;
+  document.getElementById('btn-start').style.display  = 'inline-block';
+  document.getElementById('btn-pause').style.display  = 'none';
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  isRunning     = false;
+  remainSeconds = totalSeconds;
+  updateDisplay();
+  document.getElementById('btn-start').style.display  = 'inline-block';
+  document.getElementById('btn-pause').style.display  = 'none';
+  document.getElementById('quote-box').style.display  = 'none';
+}
+
+function timerComplete() {
+  document.getElementById('btn-start').style.display = 'inline-block';
+  document.getElementById('btn-pause').style.display = 'none';
+
+  if (currentMode === 'focus') {
+    sessionsToday++;
+    document.getElementById('session-count').textContent = sessionsToday;
+
+    // Save to database
+    document.getElementById('save-duration').value = MODES.focus.minutes;
+    document.getElementById('save-form').submit();
+
+    alert('Focus session complete! Great work! Take a 5-minute break.');
+  } else {
+    alert('Break is over! Ready for another focus session?');
+    setMode('focus');
+  }
+}
+
+// Initialize display
+updateDisplay();
+</script>
+{% endblock %}

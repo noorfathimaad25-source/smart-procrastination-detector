@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Edit Task{% endblock %}
+{% block content %}
+<div class="container-fluid p-4">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/tasks">Tasks</a></li>
+      <li class="breadcrumb-item active">Edit</li>
+    </ol>
+  </nav>
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="fw-bold mb-1"><i class="bi bi-pencil-square text-warning"></i> Edit Task</h4>
+          <p class="text-muted mb-4">Update the details below.</p>
+          <form method="POST" action="/tasks/edit/{{ task.id }}">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Task Name <span class="text-danger">*</span></label>
+              <input type="text" name="task_name" class="form-control form-control-lg"
+                     value="{{ task.task_name }}" required autofocus/>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea name="description" class="form-control" rows="3">{{ task.description or '' }}</textarea>
+            </div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Deadline</label>
+                <input type="date" name="deadline" class="form-control"
+                       value="{{ task.deadline.strftime('%Y-%m-%d') if task.deadline else '' }}"/>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Priority</label>
+                <select name="priority" class="form-select">
+                  <option value="Low"    {% if task.priority=='Low'    %}selected{% endif %}>🟢 Low</option>
+                  <option value="Medium" {% if task.priority=='Medium' %}selected{% endif %}>🟡 Medium</option>
+                  <option value="High"   {% if task.priority=='High'   %}selected{% endif %}>🔴 High</option>
+                </select>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-warning btn-lg flex-grow-1">
+                <i class="bi bi-save"></i> Save Changes
+              </button>
+              <a href="/tasks" class="btn btn-outline-secondary btn-lg">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
